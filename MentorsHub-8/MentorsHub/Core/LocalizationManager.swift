@@ -2,9 +2,6 @@
 //  LocalizationManager.swift
 //  MentorsHub
 //
-//  Глобальный менеджер языка интерфейса. Юзер переключает язык на
-//  экране профиля — currentLanguage сохраняется в UserDefaults и
-//  применяется во всём приложении сразу (не только для хэндбука).
 //
 //  Как пользоваться в View:
 //      private let localization = LocalizationManager.shared
