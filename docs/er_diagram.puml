@@ -1,0 +1,272 @@
+@startuml MentorHub_ER
+
+!define PRIMARY_KEY(x) <u>x</u>
+!define FOREIGN_KEY(x) #x
+
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam defaultFontName Inter
+skinparam defaultFontSize 12
+
+skinparam entity {
+    BackgroundColor #1e1e2e
+    BorderColor #7c3aed
+    FontColor #e2e8f0
+    HeaderBackgroundColor #7c3aed
+    HeaderFontColor #ffffff
+}
+
+skinparam arrow {
+    Color #a78bfa
+    FontColor #cbd5e1
+    FontSize 11
+}
+
+' ══════════════════════════════════════════
+'  ENUM TYPES (note)
+' ══════════════════════════════════════════
+
+note as N1 #1e1e2e
+    <color:#a78bfa><b>Enum Types</b></color>
+    ----
+    <color:#94a3b8>user_role:</color>
+      head | advisor | mentor | freshman
+    <color:#94a3b8>task_status:</color>
+      pending | submitted | approved | rejected
+    <color:#94a3b8>complaint_status:</color>
+      open | in_review | resolved | dismissed
+end note
+
+' ══════════════════════════════════════════
+'  MIGRATION 001 — Core Schema
+' ══════════════════════════════════════════
+
+entity "users" as users {
+    PRIMARY_KEY(id) : UUID
+    ----
+    email          : VARCHAR(255) UNIQUE
+    password_hash  : VARCHAR(255)
+    role           : user_role
+    first_name     : VARCHAR(100)
+    last_name      : VARCHAR(100)
+    avatar_url     : TEXT
+    is_active      : BOOLEAN
+    created_at     : TIMESTAMPTZ
+    updated_at     : TIMESTAMPTZ
+}
+
+entity "academic_years" as academic_years {
+    PRIMARY_KEY(id) : UUID
+    ----
+    name       : VARCHAR(50)
+    start_date : DATE
+    end_date   : DATE
+    is_active  : BOOLEAN
+    created_at : TIMESTAMPTZ
+}
+
+entity "faculties" as faculties {
+    PRIMARY_KEY(id) : UUID
+    ----
+    name       : VARCHAR(255)
+    code       : VARCHAR(50) UNIQUE
+    created_at : TIMESTAMPTZ
+}
+
+entity "specialties" as specialties {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(faculty_id) : UUID
+    name       : VARCHAR(255)
+    created_at : TIMESTAMPTZ
+}
+
+entity "mentor_groups" as mentor_groups {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(mentor_id)        : UUID
+    FOREIGN_KEY(academic_year_id) : UUID
+    FOREIGN_KEY(specialty_id)     : UUID
+    created_at : TIMESTAMPTZ
+}
+
+entity "freshman_groups" as freshman_groups {
+    PRIMARY_KEY(freshman_id) : UUID <<PK, FK>>
+    PRIMARY_KEY(group_id)    : UUID <<PK, FK>>
+    ----
+    joined_at : TIMESTAMPTZ
+}
+
+entity "mentor_advisors" as mentor_advisors {
+    PRIMARY_KEY(mentor_id)  : UUID <<PK, FK>>
+    PRIMARY_KEY(advisor_id) : UUID <<PK, FK>>
+    ----
+    assigned_at : TIMESTAMPTZ
+}
+
+entity "refresh_tokens" as refresh_tokens {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(user_id) : UUID
+    token_hash : VARCHAR(255) UNIQUE
+    expires_at : TIMESTAMPTZ
+    created_at : TIMESTAMPTZ
+}
+
+' ══════════════════════════════════════════
+'  MIGRATION 002 — Tasks, Meetings, Complaints
+' ══════════════════════════════════════════
+
+entity "task_templates" as task_templates {
+    PRIMARY_KEY(id) : UUID
+    ----
+    title       : VARCHAR(255)
+    description : TEXT
+    due_days    : INTEGER
+    is_active   : BOOLEAN
+    FOREIGN_KEY(created_by) : UUID
+    created_at  : TIMESTAMPTZ
+    updated_at  : TIMESTAMPTZ
+}
+
+entity "tasks" as tasks {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(template_id)  : UUID
+    FOREIGN_KEY(freshman_id)  : UUID
+    FOREIGN_KEY(assigned_by)  : UUID
+    status       : task_status
+    proof_url    : TEXT
+    comment      : TEXT
+    due_date     : TIMESTAMPTZ
+    submitted_at : TIMESTAMPTZ
+    reviewed_at  : TIMESTAMPTZ
+    FOREIGN_KEY(reviewed_by) : UUID
+    created_at   : TIMESTAMPTZ
+}
+
+entity "meetings" as meetings {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(mentor_id) : UUID
+    FOREIGN_KEY(group_id)  : UUID
+    title        : VARCHAR(255)
+    description  : TEXT
+    scheduled_at : TIMESTAMPTZ
+    held         : BOOLEAN
+    notes        : TEXT
+    created_at   : TIMESTAMPTZ
+}
+
+entity "meeting_registrations" as meeting_registrations {
+    PRIMARY_KEY(freshman_id) : UUID <<PK, FK>>
+    PRIMARY_KEY(meeting_id)  : UUID <<PK, FK>>
+    ----
+    registered_at : TIMESTAMPTZ
+}
+
+entity "announcements" as announcements {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(author_id) : UUID
+    FOREIGN_KEY(group_id)  : UUID
+    title      : VARCHAR(255)
+    body       : TEXT
+    created_at : TIMESTAMPTZ
+}
+
+entity "complaints" as complaints {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(filed_by)    : UUID
+    FOREIGN_KEY(against)     : UUID
+    description  : TEXT
+    status       : complaint_status
+    FOREIGN_KEY(reviewed_by) : UUID
+    created_at   : TIMESTAMPTZ
+    resolved_at  : TIMESTAMPTZ
+}
+
+' ══════════════════════════════════════════
+'  MIGRATION 003 — Notifications, FAQ, Questions
+' ══════════════════════════════════════════
+
+entity "notifications" as notifications {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(user_id) : UUID
+    title      : VARCHAR(255)
+    body       : TEXT
+    is_read    : BOOLEAN
+    created_at : TIMESTAMPTZ
+}
+
+entity "faq_items" as faq_items {
+    PRIMARY_KEY(id) : UUID
+    ----
+    question   : TEXT
+    answer     : TEXT
+    order_num  : INTEGER
+    is_active  : BOOLEAN
+    FOREIGN_KEY(created_by) : UUID
+    created_at : TIMESTAMPTZ
+    updated_at : TIMESTAMPTZ
+}
+
+entity "questions" as questions {
+    PRIMARY_KEY(id) : UUID
+    ----
+    FOREIGN_KEY(freshman_id) : UUID
+    FOREIGN_KEY(mentor_id)   : UUID
+    body        : TEXT
+    answer      : TEXT
+    answered_at : TIMESTAMPTZ
+    created_at  : TIMESTAMPTZ
+}
+
+' ══════════════════════════════════════════
+'  RELATIONSHIPS
+' ══════════════════════════════════════════
+
+' Структура университета
+faculties      ||--o{ specialties        : "faculty_id"
+specialties    ||--o{ mentor_groups      : "specialty_id"
+academic_years ||--o{ mentor_groups      : "academic_year_id"
+
+' Группы
+users          ||--o{ mentor_groups      : "mentor_id"
+users          ||--o{ freshman_groups    : "freshman_id"
+mentor_groups  ||--o{ freshman_groups    : "group_id"
+
+' Куратор / Ментор
+users          ||--o{ mentor_advisors    : "mentor_id"
+users          ||--o{ mentor_advisors    : "advisor_id"
+
+' Токены
+users          ||--o{ refresh_tokens     : "user_id"
+
+' Задачи
+users          ||--o{ task_templates     : "created_by"
+task_templates ||--o{ tasks             : "template_id"
+users          ||--o{ tasks             : "freshman_id"
+users          ||--o{ tasks             : "assigned_by"
+
+' Встречи
+users          ||--o{ meetings          : "mentor_id"
+mentor_groups  ||--o{ meetings          : "group_id"
+users          ||--o{ meeting_registrations : "freshman_id"
+meetings       ||--o{ meeting_registrations : "meeting_id"
+
+' Объявления и жалобы
+users          ||--o{ announcements     : "author_id"
+mentor_groups  ||--o{ announcements     : "group_id"
+users          ||--o{ complaints        : "filed_by"
+users          ||--o{ complaints        : "against"
+
+' Уведомления, FAQ, Вопросы
+users          ||--o{ notifications     : "user_id"
+users          ||--o{ faq_items         : "created_by"
+users          ||--o{ questions         : "freshman_id"
+users          ||--o{ questions         : "mentor_id"
+
+@enduml

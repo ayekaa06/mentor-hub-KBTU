@@ -1,0 +1,81 @@
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  mentorhub-db:
+    image: postgres:16-alpine
+    container_name: mentorhub-db
+    environment:
+      POSTGRES_USER:     ${DB_USER:-mentorhub}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mentorhub_secret}
+      POSTGRES_DB:       ${DB_NAME:-mentorhub_db}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mentorhub} -d ${DB_NAME:-mentorhub_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - mentorhub-network
+
+  # ── Go Backend ─────────────────────────────────────────────────────────────
+  mentorhub-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mentorhub-backend
+    depends_on:
+      mentorhub-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: mentorhub-db
+      SERVER_PORT: 8080
+    expose:
+      - "8080"
+    restart: unless-stopped
+    networks:
+      - mentorhub-network
+
+  # ── Database Migrations ───────────────────────────────────────────────────
+  mentorhub-migrate:
+    image: migrate/migrate:latest
+    container_name: mentorhub-migrate
+    volumes:
+      - ./migrations:/migrations
+    depends_on:
+      mentorhub-db:
+        condition: service_healthy
+    command: [
+      "-path", "/migrations",
+      "-database",
+      "postgres://${DB_USER:-mentorhub}:${DB_PASSWORD:-mentorhub_secret}@mentorhub-db:5432/${DB_NAME:-mentorhub_db}?sslmode=disable",
+      "up"
+    ]
+    profiles: ["migrate"]
+    networks:
+      - mentorhub-network
+
+  # ── Angular Frontend (Production — Nginx) ──────────────────────────────────
+  mentorhub-frontend:
+    build:
+      context: ./Practice-master/mentorHUB
+      dockerfile: Dockerfile
+    container_name: mentorhub-frontend
+    ports:
+      - "8082:80"
+    depends_on:
+      - mentorhub-backend
+    restart: unless-stopped
+    networks:
+      - mentorhub-network
+
+networks:
+  mentorhub-network:
+
+volumes:
+  postgres_data:

@@ -1,0 +1,24 @@
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+Practice-master/mentorHUB/node_modules/
+Practice-master/mentorHUB/dist/
+Practice-master/mentorHUB/.angular/
+
+# ── Go build artifacts ────────────────────────────────────────────────────────
+bin/
+*.exe
+server.exe
+
+# ── Git / IDE ─────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# ── Logs / Coverage ───────────────────────────────────────────────────────────
+*.log
+coverage.out
+coverage.html
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
