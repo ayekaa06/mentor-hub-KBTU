@@ -15,7 +15,7 @@ coverage.html
 go.work
 go.work.sum
 
-# Secrets — НИКОГДА не коммитить!
+# Secrets
 .env
 *.pem
 *.key
@@ -32,6 +32,12 @@ Thumbs.db
 
 # Build artifacts
 dist/
+build/
+DerivedData/
 
 # Logs
 *.log
+
+# Xcode
+xcuserdata/
+*.xcuserstate
